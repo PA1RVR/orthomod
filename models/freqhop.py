@@ -39,25 +39,19 @@ print ('Chan %s->%s = %s' % (xmit,recv,chanhexcode))
 print ('Chan %s->%s = %s' % (recv,xmit,crevhexcode))
 
 hexid_divors = { }
-hexid_divors [0] = [ 32, 31, 30 ]
-hexid_divors [4] = [ 29, 28, 27 ]
-hexid_divors [8] = [ 26, 25, 24 ]
-hexid_divors [12] = [ 23, 22, 21 ]
-hexid_divors [16] = [ 3, 2, 20, 19, 18 ]
-hexid_divors [20] = [ 17, 16, 15, 14 ]
-hexid_divors [24] = [ 13, 12, 11, 10 ]
-hexid_divors [28] = [ 9, 8, 7, 6, 5, 4 ]
+hexid_divors [ 0] = [32, 31, 29, 28, 27, 6, 5]
+hexid_divors [ 8] = [26, 25, 24, 23, 22, 21, 4]
+hexid_divors [16] = [20, 19, 18, 17, 16, 15, 14, 2]
+hexid_divors [24] = [30, 13, 12, 11, 10, 9, 8, 7, 3]
 #
 def hexid2freqhop (hexid):
 	work = 0
 	choix = { 1: 0 }
-	for pos0 in range (0,32,4):
-		work += int (hexid [pos0:pos0+4], 16)
-		work %= 65536
+	for pos0 in range (0,32,8):
+		work = int (hexid [pos0:pos0+8], 16)
 		for divor in hexid_divors [pos0]:
 			choix [divor] = work % divor
 			work = trunc (work / divor)
-		accu = work
 	values = [ '%d' % i for i in range (32) ]
 	retval = [ ]
 	while len (values) > 0:

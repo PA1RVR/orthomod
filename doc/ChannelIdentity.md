@@ -1,6 +1,7 @@
 # Channel Identity for OrthoMod
 
-> *Channels need an identity.  How to get to one?*
+> *Channels need an identity.  How to get to one?  And how does
+> it translate to the frequency hopping model?*
 
 We distribute the same signal over frequencies in a time-based
 order, and use the order to derive an identity.  Receivers are
@@ -10,6 +11,10 @@ rather low cost, after the FFT has come through.
 The picture to keep in mind, simplified to 4 frequencies:
 
 ![Identity encoded as Frequency Hopping Order](identity.png)
+
+The first identity is one from 4, the second chooses from the
+remaining 3 and so on.  The number of possible identities is
+therefore 4!=4x3x2x1=24.
 
 
 ## Many Identities
@@ -114,25 +119,26 @@ but are merely a byte-rotated version of one another.
 Given an identity, we need to derive a frequency hopping scheme
 from the SHA256 outputs.  In all cases, we use div/mod arithmetic
 applied to the whole number.  We will only use the initial 16 bytes
-or 128 bits, and split it into 16-bit words in big-endian order
-that we div/mod with a number of values.  When a remainder exists,
-it is added to the next 16-bit word and truncated to an unsigned
-16 bit integere before we process that.
+or 128 bits, and split it into 32-bit words in big-endian order
+that we div/mod with a number of values.  Note that SHA256 also
+uses 32-bit math and big-endian order.  When a remainder exists,
+it is ignored; the ranges are have about 2.5 bits to spare to
+distribute the entropy reasonly well.
 
 The first choice covers 32 options, the next 31 and so on, until
 we reach 2 choices only.
 
-  * Short #0 is div-modded by 32, 31, 30 (29760 combinations).
-  * Short #1 is div-modded by 29, 28, 27 (21924 combinations).
-  * Short #2 is div-modded by 26, 25, 24 (15600 combinations).
-  * Short #3 is div-modded by 23, 22, 21 (10626 combinations).
-  * Short #4 is div-modded by 3, 2, 20, 19, 18 (41040 combinations).
-  * Short #5 is div-modded by 7, 16, 15, 14 (57120 combinations).
-  * Short #6 is div-modded by 13, 12, 11, 10 (17160 combinations).
-  * Short #7 is div-modded by 9, 8, 7, 6, 5, 4 (60480 combinations).
+  * UINT32 #0 is div-modded by 32, 31, 29, 28, 27, 6, 5 (entropy 29.281 bits)
+  * UINT32 #1 is div-modded by 26, 25, 24, 23, 22, 21, 4 (entropy 29.305 bits)
+  * UINT32 #2 is div-modded by 20, 19, 18, 17, 16, 15, 14, 2 (entropy 29.541 bits)
+  * UINT32 #3 is div-modded by 30, 13, 12, 11, 10, 9, 8, 7, 3 (entropy 29.536 bits)
 
-The early div/mod for 3 and 2 helps to limit the range; the values
-will be remembered for later use, of course.
+Some of these values are manually redistributed: 30 and 6..2;
+this helps to keep the bit usage in a small [29.28;29.55] range
+and the low values at the end benefit maximally from the little
+remaining entropy because they wrap most often.  The downside
+of this entropy optimisation is a slight complication in deriving
+the frequency model, which is only needed once per data link.
 
 At every stage, there is a list of frequencies (or frequency groups),
 ranging from low to high.  Initially, this starts with `freq.0` and
@@ -160,7 +166,7 @@ The rotated channel identities, used to blend in the transmitter, are:
   * `d2fe3da94daaf6992a94358663ef0b1c2b75cc999c69d12deb782093bd934d32`
 
 We shall XOR the binary values below the hex, take the first half,
-split it into big-endian values of 16 bits and call the result our
+split it into big-endian values of 32 bits and call the result our
 channel identity.  We then obtain the frequency hopping scheme that
 matches this channel identity.
 
@@ -168,29 +174,40 @@ When PA1RVR3 transmits to PA1RVRC, the channel identity is, depending
 on the form you prefer:
 
   * `15feffdce394a70ee4c0a4eec0f1aa4c`
-  * `15fe`, `ffdc`, `e394`, `a70e`, `e4c0`, `a4ee`, `c0f1`, `aa4c`
-  * 5630, 65500, 58260, 42766, 58560, 42222, 49393, 43596
+  * 0x15feffdc, 0xe394a70e, 0xe4c0a4ee, 0xc0f1aa4c
+  * 369033180, 3818170126, 3837830382, 3237063244
 
 and the corresponding frequency hopping plan is:
 
-  * 30, 20, 5, 19, 21, 31, 26, 16, 22, 13, 12, 0, 1, 23, 10, 24, 6, 9, 25, 14, 17, 27, 28, 4, 11, 8, 7, 29, 15, 3, 18, 2
+  * 28, 7, 4, 29, 3, 31, 6, 26, 15, 16, 21, 0, 5, 20, 11, 2, 25, 17, 24, 9, 10, 1, 8, 23, 14, 19, 27, 18, 30, 12, 22, 13.
 
 When PA1RVRC transmits to PA1RVR3, the channel identity is, depending
 on the form you prefer:
 
   * `c1352371aaab100e2da8ae2307b21e81`
-  * `c135`, `2371`, `aaab`, `100e`, `2da8`, `ae23`, `07b2`, `1e81`
-  * 49461, 9073, 43691, 4110, 11688, 44579, 1970, 7809
+  * 0xc1352371, 0xaaab100e, 0x2da8ae23, 0x07b21e81
+  * 3241485169, 2863337486, 766029347, 129113729
 
 and the corresponding frequency hopping plan is:
 
-  * 21, 27, 19, 29, 4, 12, 13, 6, 25, 24, 2, 11, 14, 3, 9, 10, 30, 28, 22, 17, 18, 1, 5, 23, 15, 16, 20, 8, 0, 7, 26, 31
+  * 17, 5, 31, 24, 4, 1, 27, 18, 9, 11, 23, 8, 13, 22, 19, 26, 21, 12, 30, 25, 7, 0, 28, 20, 10, 14, 29, 16, 3, 2, 15, 6.
 
 **Code:** See [freqhop.py](../models/freqhop.py) for a demonstration,
 callable with the designations for a transmitter and receiver.
 
-**Note:** The entropy of this is not optimal.  We might prefer 32-bit
-chunks instead of 16-bit chunks.  Given that we rely on SHA256,
-this may be a reasonable assumption; in cases where that needs to be
-computed upstream from the radio than so can the frequency hopping.
 
+## Alternative Computations
+
+We might consider more frequencies, and not using all of them.  Especially
+due to the factorial effect we gain big time:
+
+  * On 32 frequencies, 32 choices give 32!/(32-32)! = 118 bits of entropy
+  * On 64 frequencies, 20 choices give 64!/(64-20)! = 115 bits of entropy
+  * On 128 frequencies, 16 choices give 128!/(128-16)! = 111 bits of entropy
+  * On 256 frequencies, 14 choices give 256!/(256-14)! = 111 bits of entropy
+  * On 512 frequencies, 13 choices give 512!/(512-13)! = 117 bits of entropy
+
+Of course, we need to relate this to the number of frequencies, and what
+they do to the ratio of total bandwidth and available bandwidth per channel.
+Furthermore, for orthogonal transmission the clash rate is important.
+We shall need to figure out how to strike this new balance.
