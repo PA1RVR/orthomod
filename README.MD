@@ -52,8 +52,8 @@ long as a channel is used by only one transmitter at a time.
 **Read more:**
 
   * [Design Documentation](doc/OrthoModulation.md)
+  * [Channel Identity](doc/ChannelIdentity.md)
   * [Thoughts about AX.25 integration](doc/AX25.md)
-  * [Identity and Per-Frequency Delays](doc/identity.pdf)
   * [Constellation Diagram for TPSK](doc/tpsk.png)
   * [Block Diagram with AX.25 / NRZI / BPSK](doc/orthomod-bpsk.pdf)
   * [Block Diagram with AX.25 / TPSK](doc/orthomod-tpsk.pdf)
