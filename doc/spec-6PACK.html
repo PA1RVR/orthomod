@@ -1,0 +1,585 @@
+<HTML>
+<HEAD><TITLE>6pack</TITLE>
+</HEAD>
+<BODY bgcolor="#FFFFFF" LINK="#000080" VLINK="#800000">
+<P>
+<FONT SIZE=6>6PACK &#173; a &quot;real time&quot; PC to TNC protocol</FONT>
+</P>
+<FONT SIZE=2>
+<P>
+by Matthias Welwarsky, DG2FEF @ DB0KLN.DEU.EU, Am Pelz 77c, 64295 Darmstadt, Germany
+<BR>
+translated by Tom Sailer, HB9JNX @ HB9W.CHE.EU, Weinbergstra&szlig;e 76, 8408 Winterthur, Switzerland
+<BR>
+converted to HTML and indexed by Alexander Stohr, DG3MMF @ OE9XPI.AUT.EU, Sch&ouml;nauer Str. 5, 88131 Lindau, Germany
+</P>
+</FONT>
+<P>
+<BR>
+</P>
+<P>
+<FONT SIZE=6><A NAME="Index">Index</A></FONT>
+</P>
+<UL>
+<LI><A HREF="#Intro">Introduction</A></LI>
+<LI><A HREF="#Basic">Basic design</A></LI>
+<LI><A HREF="#Trans">The data transmission between TNC and PC</A></LI>
+<LI><A HREF="#Radio">Transmission sequence on the radio port</A></LI>
+<LI><A HREF="#Adres">Automatic configuration of the TNC addresses</A></LI>
+<LI><A HREF="#Kvs6P">KISS versus 6PACK</A></LI>
+<LI><A HREF="#Tommy">Some remarks from the translator</A></LI>
+<LI><A HREF="#Books">Related literature</A></LI>
+</UL>
+<P>
+<FONT SIZE=6>
+<A NAME="Intro">Introduction</A>
+</FONT>
+</P>
+<P>
+During the development of the PC/FlexNet software package, there was a strong desire to use
+the existing hardware, especially the very widespread TNC2, which populates almost every
+packet radio station nowadays. Sysops of TheNetNode digipeaters also showed much interest,
+since many TNN nodes use TNC2 devices connected using a KISS token ring.
+<BR>
+</P>
+<P>
+Existing TNC protocols have severe disadvantages. The KISS protocol does not allow much
+influence on the channel access. This prevents the implementation of alternative channel access
+schemes, such as DAMA or OPTIMA. The so-called &quot;WA8DED Hostmode&quot; does not provide
+data transparency, and its throughput is very limited.
+<BR>
+</P>
+<P>
+The basic concept of 6PACK was developed at the end of 1993 by Ekki Plicht, DF4OR,
+Henning Rech, DF9IC and Gunter Jost, DK7WJ. It was further developed for use in the
+PC/FlexNet software package by Gunter Jost, DK7WJ, and Matthias Welwarsky, DG2FEF.
+The protocol then did not support multiple TNCs connected in a ring topology. It only allowed
+for one TNC per asynchronous serial interface. It was then found that a ring topology required
+different protocol features than a simple point to point connection.
+<BR>
+</P>
+<P>
+The current revision of the protocol has many additional features compared to the first version. It
+now allows a ring topology of up to eight TNCs connected to a single asynchronous serial
+interface of the computer. The ring wiring is hardware compatible with the existing token rings
+used by the &quot;TheNetNode&quot; software.
+<BR>
+</P>
+<P>
+6PACK provides:<BR>
+<UL>
+<LI>Data transparency<BR>
+<LI>predictable capacity requirements on the ring</LI>
+<LI>data and realtime information is distinguished</LI>
+<LI>fast response to changing channel usage, even under high loading and multiple TNCs on the ring</LI>
+<LI>automatic ring setup replaces a channel number &quot;patched&quot; into the (EP)ROM</LI>
+<LI>data is protected by a checksum</LI>
+</UL>
+<BR>
+</P>
+<P>
+<FONT SIZE=6>
+<A NAME="Basic">Basics</A>
+</FONT>
+</P>
+<P>
+The asynchronous serial interface parameters are: 8 data bits, 1 stop bit, no parity bit.
+The baud rate on the ring must be at least twice the highest HDLC bit rate of the TNCs
+connected to the ring. RTS/CTS is ignored, RTS however should toggle about every 10ms to
+reset an eventually connected hardware watchdog. The TNC software should implement another
+watchdog which terminates any transmission if no further data is received from the PC. To reset
+this watchdog, any command sent to the TNC will do, for example an LED control command.
+Bits 6 and 7 of every byte distinguish between channel data and control codes.
+</P>
+<TABLE WIDTH=300 BORDER=1 FRAME=BOX RULES=ALL>
+<COLGROUP><COL WIDTH=300><COL WIDTH=400></COLGROUP><THEAD><TR>
+<TD WIDTH=467 VALIGN=TOP>
+<P>
+<PRE>76 543210</PRE>
+</TD>
+<TD WIDTH=694 VALIGN=TOP>
+<P>
+<PRE>meaning</PRE>
+</TD>
+</TR>
+</THEAD><TBODY><TR>
+<TD WIDTH=467 VALIGN=TOP>
+<P>
+<PRE>00 xxxxxx<BR>01 xxxccc<BR>1x xxxccc</PRE>
+</TD>
+<TD WIDTH=694 VALIGN=TOP>
+<P>
+<PRE>channel data<BR>status/protocol data<BR>status/protocol data</PRE>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=467 VALIGN=TOP>
+<P>
+<PRE>x<BR>c</PRE>
+</TD>
+<TD WIDTH=694 VALIGN=TOP>
+<P>
+<PRE>data<BR>channel address</PRE>
+</TD>
+</TR>
+</TBODY></TABLE>
+</PRE>
+<P>
+<BR>
+</P>
+<P>
+Control codes always consist of only one byte. Code groups of more than one byte are never
+used. Therefore, control codes require little transmission capacity. Control codes are completely
+independent from previous or following control codes. This makes the protocol very robust. An
+exception to this rule is, as in the KISS protocol, the &quot;start/end&quot; command, which always
+belongs to a data packet, and the channel data itself. Because two bits are used to distinguish
+between channel data and control codes, only six bits per byte are available for channel data.
+Therefore, three data bytes have to be encapsulated into four &quot;6PACKs&quot;, according to the
+following scheme. Note that a channel data byte does not correspond directly to a byte on the
+asynchronous serial interface.
+<BR>
+</P>
+<TABLE WIDTH=420 BORDER=1 FRAME=BOX RULES=ALL>
+<COLGROUP><COL WIDTH=349><COL WIDTH=345><COL WIDTH=345><COL WIDTH=341><COL WIDTH=349></COLGROUP><THEAD><TR>
+<TH WIDTH=349 VALIGN=TOP>
+<P>
+<BR>
+</TH>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>1st 6PACK</PRE>
+</TD>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>2nd 6PACK</PRE>
+</TD>
+<TD WIDTH=341 VALIGN=TOP>
+<P>
+<PRE>3rd 6PACK</PRE>
+</TD>
+<TD WIDTH=349 VALIGN=TOP>
+<P>
+<PRE>4th 6PACK</PRE>
+</TD>
+</TR>
+</THEAD><TBODY><TR>
+<TD WIDTH=349 VALIGN=TOP>
+<P>
+<PRE>Codes</PRE>
+</TD>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>00xx.xxxx</PRE>
+</TD>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>00xx.yyyy</PRE>
+</TD>
+<TD WIDTH=341 VALIGN=TOP>
+<P>
+<PRE>00yy.yyzz</PRE>
+</TD>
+<TD WIDTH=349 VALIGN=TOP>
+<P>
+<PRE>00zz.zzzz</PRE>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=349 VALIGN=TOP>
+<P>
+<PRE>Bits</PRE>
+</TD>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>  54.3210</PRE>
+</TD>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>  76.3210</PRE>
+</TD>
+<TD WIDTH=341 VALIGN=TOP>
+<P>
+<PRE>  76.5410</PRE>
+</TD>
+<TD WIDTH=349 VALIGN=TOP>
+<P>
+<PRE>  76.5432</PRE>
+</TD>
+</TR>
+</TBODY></TABLE>
+<P>
+<BR>
+</P>
+<P>
+The symbols &quot;x&quot;, &quot;y&quot; and &quot;z&quot; with the corresponding bit numbers represent the channel
+data. This rather complex scheme was chosen since it requires the least possible shift operations
+to extract the channel data from the 6PACKs.
+<BR>
+</P>
+<P>
+The fast transmission of real time events is achieved by using priority codes. The TNC for
+example transmits an appropriate command code at every change of the DCD line. Additionally,
+the TNC sends the DCD state about every second to allow recovering of a potentially lost
+command code.
+<BR>
+</P>
+<P>
+The coding of the command codes is shown in Table 1. The code 0xC0 (1100 0000) is not used
+in 6PACK; this should prevent an accidentally connected KISS TNC from sending.
+<BR>
+</P>
+<P>
+<A NAME="Trans">
+<FONT SIZE=6>The data transmission between TNC and PC</FONT>
+</A>
+</P>
+<P>
+The following simple rules govern the data transmission between the TNCs and the PC.<BR>
+<UL>
+<LI>Channel data is always transmitted in whole packets. Every packet is enclosed with a pair
+of &quot;start/end&quot; commands. The channel number carried in the starting &quot;start/end&quot;
+command defines the source or destination of the packet. The first data byte carries the TX
+delay, either the TX delay that should be used by the transmitter, or the one measured by
+the receiver, depending on the data direction. The last data byte carries the checksum. It is
+adjustet so that the sum over the whole packet (including TX delay and checksum byte)
+plus the channel number add up to 0xFF (8bit two's complement arithmetic)</LI>
+<LI>Priority commands must be processed before ordinary data. If a TNC receives a priority
+code with an address that does not match its own, it must immediately retransmit the
+command, even if it is just sending a packet.</LI>
+<LI>A packet of channel data must not be interrupted by another packet of channel data. The
+TNC may only place its own packets onto the ring either before or after packets from
+other TNCs.</LI>
+</UL>
+</P>
+<P>
+Each packet of channel data has the following structure:
+<BR>
+</P>
+<TABLE WIDTH=300 BORDER=1 FRAME=BOX RULES=COLS>
+<COLGROUP><COL WIDTH=235><COL WIDTH=235><COL WIDTH=227><COL WIDTH=227><COL WIDTH=231></COLGROUP><THEAD><TR>
+<TD WIDTH=235 VALIGN=TOP>
+<P ALIGN=CENTER>
+<PRE>SOF</PRE>
+</TD>
+<TD WIDTH=235 VALIGN=TOP>
+<P ALIGN=CENTER>
+<PRE>TXD</PRE>
+</TD>
+<TD WIDTH=227 VALIGN=TOP>
+<P ALIGN=CENTER>
+<PRE>DATA</PRE>
+</TD>
+<TD WIDTH=227 VALIGN=TOP>
+<P ALIGN=CENTER>
+<PRE>CS</PRE>
+</TD>
+<TD WIDTH=231 VALIGN=TOP>
+<P ALIGN=CENTER>
+<PRE>SOF</PRE>
+</TD>
+</TR>
+</THEAD></TABLE>
+<PRE>
+        SOF     Start/end of Frame
+        TXD     TX delay in units of 10ms
+        DATA    Channel data
+        CS      Checksum byte
+</PRE><P>
+<BR>
+</P>
+<P>
+This structure results after extracting the data from the 6PACKs. The TX delay can be
+reconstructed only after the second 6PACK with channel data.
+</P>
+<P>
+<BR>
+</P>
+<TABLE WIDTH=400 BORDER=1 FRAME=BOX RULES=ALL>
+<COLGROUP><COL WIDTH=345><COL WIDTH=1034><COL WIDTH=450></COLGROUP><THEAD><TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>H&#173;&#173;&#173; &#173;&#173;&#173;L</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>command</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<PRE>direction</PRE>
+</TD>
+</TR>
+</THEAD><TBODY><TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>0100 0ccc<BR>0100 1ccc<BR>0101 0ccc<BR>0101 1ccc</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>start/end of frame <BR>TX underrun<BR>RX overrun<BR>RX buffer overflow</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<PRE>PC &lt;--&gt; TNC<BR>TNC --&gt;  PC<BR>TNC --&gt;  PC<BR>TNC --&gt;  PC</PRE>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>011x yccc</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>LED: STA=x; CON=y</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<PRE>PC  --&gt; TNC</PRE>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>10xy zccc</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>priority message<BR>  x = TX counter + 1<BR>  y = RX counter + 1<BR>  z = DCD state</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<PRE><BR>PC &lt;--&gt; TNC<BR>TNC --&gt;  PC<BR>TNC --&gt;  PC</PRE>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>1100 0000</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>not used (KISS FEND)</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<BR>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>1110 0ccc</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>send calibration pattern for 15s<BR>calibration terminated</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<PRE>PC  --&gt; TNC<BR>TNC --&gt;  PC</PRE>
+</TD>
+</TR>
+<TR>
+<TD WIDTH=345 VALIGN=TOP>
+<P>
+<PRE>1110 1ccc</PRE>
+</TD>
+<TD WIDTH=1034 VALIGN=TOP>
+<P>
+<PRE>TNC address</PRE>
+</TD>
+<TD WIDTH=450 VALIGN=TOP>
+<P>
+<PRE>PC  &lt;--&gt; TNC</PRE>
+</TD>
+</TR>
+</TBODY></TABLE>
+</PRE>              Table 1</PRE>
+<P>
+<BR>
+</P>
+<P>
+<A NAME="Radio">
+<FONT SIZE=6>Transmission sequence on the radio port</FONT>
+</A>
+</P>
+<P>
+Transmission on the radio port take place according to the following scheme:<BR>
+<OL>
+<LI>The PC sends a &quot;TX counter + 1&quot; command to the TNC. The TNC then keys the
+transmitter (i.e. it activates the PTT line) and increments an internal counter. The PC also
+increments an internal counter associated with that TNC. This counter serves the PC as a
+PTT indicator.</LI>
+<LI>the PC sends the packet onto the ring</LI>
+<LI>as soon as the TX delay value arrives in the TNC, it decides whether enough time has
+passed already since the transmitter was keyed on. If not, keying up the transmitter is
+continued until the specified amount of time passed. When the next data byte arrives, the
+transmission begins, even if the whole packet has not arrived yet.</LI>
+<LI>If the TNC receives the &quot;start/end&quot; command and the received checksum was bad, it must
+send an ABORT sequence on the radio port.</LI>
+<LI>As soon as the TNC completes transmitting a packet on the radio port, it sends a &quot;TX
+counter + 1&quot; command to the PC and decrements its internal counter. Because every
+packet is preceded by a &quot;TX counter + 1&quot; command from the PC, the TNC always
+knows how many packets will follow in the current transmission. The transmitter must
+stay keyed until the last packet is sent.</LI>
+<LI>The PC receives the &quot;TX counter + 1&quot; command from the TNC and decrements its
+associated internal counter. If this counter reaches zero, then the transmission terminates.</LI>
+</OL>
+The transmission of the channel data packets from the TNC to the PC takes place similarly, with
+the exception that the PC does not acknowledge a received packet. Every packet the TNC
+receives on its radio port is sent onto the ring, preceded by an &quot;RX counter + 1&quot; command.
+<BR>
+</P>
+<P>
+<A NAME="Adres">
+<FONT SIZE=6>Automatic configuration of the TNC addresses</FONT>
+</A>
+</P>
+<P>
+Automatic configuration of the TNC addresses is achieved by the following simple scheme.
+</P>
+<OL>
+<LI>the TNC receives an address command (1110 1ccc) and sets its own address to the value
+contained in the command (the ccc bits).</LI>
+<LI>the TNC increments the address contained in the command by one and retransmits the
+command.</LI>
+</OL>
+<P>
+Since every TNC on the ring behaves according to these rules, TNC addresses are allocated
+sequentially. The command transmitted by the last TNC and received by the PC contains the
+number of connected TNCs.
+<BR>
+</P>
+<P>
+<A NAME="Kvs6P">
+<FONT SIZE=6>KISS versus 6PACK</FONT>
+</A>
+</P>
+<P>
+6PACK provides some advantages over KISS, most notably the ability to transmit real time data
+and thus the ability to implement the channel access algorithm in the PC.
+</P>
+<P>
+KISS achieves data transparency by prefixing some data bytes by an escape code. This means
+that the transmission capacity needed to transmit a data packet depends largely on the contents
+of the packet. In the worst case, twice the bandwith is needed. With 6PACK, the transmission
+capacity needed is exactly predictable, if one neglects the real time commands inserted into the
+data stream.
+</P>
+<P>
+If one continues the comparison and compares 6PACK rings to KISS token rings, the
+advantages of 6PACK become even clearer. With a KISS token ring, the response time of the
+system depends on the loading of the ring. Since the token ring does not transmit DCD and
+PTT states, each TNC needs to implement its own channel access algorithm, and usually a rather
+primitive SlotTime/p-Persistence algorithm is used. Also, there is no timing relation between the
+receipt of a packet over the air and the arrival of the packet in the PC. The PC does not know
+when the packet is actually sent. (Note by the translator: When the FRACK timer expires and
+the PC retransmits a frame, the original frame may still wait for transmission, since the channel
+was busy all the time. Then the retransmission of the frame produces additional unnecessary
+load on an already congested channel)
+</P>
+<P>
+This usually leads to the transmission of frames with outdated sequence numbers and to strange
+effects if one tries to implement a DAMA master on a KISS token ring. With high HDLC bit
+rates and high load on the ring, the transmitter may be interrupted between packets, which leads
+to a much increased collision probability.
+</P>
+<P>
+6PACK provides no mechanisms which would allow the TNC to implement its own channel
+access. Therefore, the channel access has to be done in the PC. This is a significant advantage,
+especially on half duplex links.
+</P>
+<P>
+Short response times, which are needed by, for example, a DAMA slave, cannot be achieved with
+KISS. The transmitter keying is always delayed by the time it takes to transmit the packet on the
+asynchronous serial interface.
+</P>
+<P>
+With 6PACK, real time data and channel data are distinguishable. Therefore, the delay of real
+time data does not depend on the ring loading, and it can be calculated from the ring bit rate and
+the number of TNCs on the ring. Each TNC delays the byte by between 10 and 20 bits, which is
+260 to 520 &#181;s at 38.4kBit/s. The longest possible delay at 38.4kBit/s is therefore
+8 * 520 &#181;s = 4.2 ms.
+</P>
+<P>
+This means that it does not take more than 4.2 ms to key the transmitter of a particular TNC, or
+to communicate the DCD state to the PC. This way, even a ring of TNCs may be controlled
+quite precisely, but the additional delay of a ring may increase the collision probability slightly
+on a half duplex channel.
+</P>
+<P>
+A flaw of 6PACK is that the TX delay may be longer than requested. This happens every time a
+packet is delayed more than the requested TX delay compared to its preceding &quot;TX counter +
+1&quot; command. However, measures should be taken to prevent the peer station from complaining
+about the too long TX delay.
+</P>
+<P>
+Last, but not least: Unlike with KISS, the TNC LEDs can be controlled by the host PC directly.
+They are used just like the LEDs on the RMNC3 card.
+</P>
+<P>
+<A NAME="Tommy">
+<FONT SIZE=6>Some remarks from the translator</FONT>
+</A>
+</P>
+<P>
+<BR>
+</P>
+<P>
+<IMG SRC="spec-6PACK-figure1.gif" ALIGN=BOTTOM WIDTH=486 HEIGHT=179 BORDER=0 ALT="figure1">Figure 1
+</P>
+<P>
+Figure 1 shows the wiring of a TNC ring.
+</P>
+<P>
+<BR>
+</P>
+<P>
+FlexNet allows different channel access algorithms to be used. It may use a modified p-
+persistence algorithm, DAMA, or OPTIMA in the future. FlexNet allows even multiple data
+rates and modulation schemes to share one radio channel. For example, combined 1200 Baud
+AFSK / 9600 Baud FSK user accesses can be found in Europe, since it is often not possible to
+get different frequencies for both modes, because the 70cm and 23cm bands are very crowded.
+In this case, a 1200 baud AFSK and a 9600 baud FSK modem are connected to the same
+transmitter in parallel. Thus the channel access algorithm spans multiple channels. In
+PC/FlexNet, the channel access for radio channels is done in the L2 kernel. So L1 drivers and
+6PACK TNCs must not implement their own channel access algorithm.
+<BR>
+</P>
+<P>
+TX delay is the time between keying the transmitter and starting to send the first packet. This
+time allows the radio to start the transmitter. HDLC flags are usually sent during this time. TX
+delay is specified in 10ms units. FlexNet also monitors the TX delay of the other stations on the
+channel, and complains if a station uses an excessively long TX delay (more than 100ms in
+excess to what the transmitter needs). PC/FlexNet L1 drivers and thus 6PACK TNCs should
+listen for a series of HDLC flags preceding a data packet and report the duration of this
+sequence in the TX delay byte of the received data packet. Note that only error free reception of
+the flags should be accepted. In the unlikely event that the hardware does not support the
+measuring of the TX delay, zero should be returned. Zero may also be returned for every packet
+other than the first of a particular transmission. If, due to overload on the ring, the required TX
+delay cannot be met, the sending station must make sure the peer does not complain about the
+long TX delay. This can be done by inserting an ABORT sequence, for example.
+<BR>
+</P>
+<P>
+Note that for the sake of fast retransmission of priority commands, hardware FIFOs in the
+asynchronous serial interface should not be used.
+<BR>
+</P>
+<P>
+The translator would like to thank Matthias Welwarsky DG2FEF and Gunter Jost DK7WJ for
+the assistence, and Esther Oswald for correcting this translation.
+<BR>
+</P>
+<P>
+<A NAME="Books">
+<FONT SIZE=6>Related literature</FONT>
+</A>
+</P>
+<PRE>
+[1] Karn, Phil KA9Q, and Mike Chepponis K3MC, The KISS TNC: A simple Host-to-TNC
+    communications protocol, 1990
+[2] Welwarsky, Matthias DG2FEF, DAMA und OPTIMA, TheFirmware Version 2.7, 1994
+</PRE>
+</BODY></HTML>
+
