@@ -31,6 +31,7 @@ recvrothexcode = recvhexcode [32:] + recvhexcode [:32]
 print ('Xmit %s = %s' % (xmit,xmithexcode))
 print ('Recv %s = %s' % (recv,recvhexcode))
 print ('Xrot %s = %s' % (xmit,xmitrothexcode))
+print ('Xrot %s = %s' % (recv,recvrothexcode))
 
 chanhexcode = ''.join ([ '%02x' % (xmitrotbincode [i] ^ recvbincode [i]) for i in range (16) ])
 crevhexcode = ''.join ([ '%02x' % (recvrotbincode [i] ^ xmitbincode [i]) for i in range (16) ])
