@@ -32,6 +32,13 @@ likelyhood of spreading transmissions and perhaps allowing us
 to drop echo cancellation in some cases, we prefer different
 identities for different directions.
 
+Groups may have their own idea of an identity.  We suggest
+the use of a URI as a text.  It is impossible in general to
+dictate a URI to be in canonical form, so this is up to the
+user.  Note how `#xxx` fragments may always be added for local
+processing, and how this might add a "secret" to encrypt the
+group address.
+
 
 ## Entropy for Identities
 
