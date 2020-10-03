@@ -10,7 +10,7 @@ from math import trunc
 from hashlib import sha256
 
 if len (sys.argv) != 3:
-	sys.stderr.write ('Usage: %s xmit recv\nWhere the parameters are a radio amateur call sign with hex station id\n' % (sys.argv [0],))
+	sys.stderr.write ('Usage: %s xmit recv\nWhere the parameters are a radio amateur call sign with station id\nExample: %s PA1RVR-3 PA1RVR-12' % (sys.argv [0],sys.argv [0]))
 	sys.exit (1)
 
 xmit = sys.argv [1].upper ()

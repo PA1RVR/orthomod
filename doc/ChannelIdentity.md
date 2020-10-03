@@ -37,8 +37,16 @@ the use of a URI as a text.  It is impossible in general to
 dictate a URI to be in canonical form, so this is up to the
 user.  Note how `#xxx` fragments may always be added for local
 processing, and how this might add a "secret" to encrypt the
-group address.
-
+group address.  **TODO:** *We may not have a way of relaying
+the URI form to the radio layer, so is this prudent?*  Note
+that several chat and broadcast applications are built on
+top of AX.25 `UI` frames, using a fixed destination address.
+For example, APRS defines prefixes that can be extended up to
+6 characters and always the `-0` station.  These are pretty
+much fixed destination addresses (note that radio amateurs
+transmitting on radio amateur bands are required in many
+legislations to regularly include the transmitter identity,
+but not necessarily the receiver).
 
 ## Entropy for Identities
 
@@ -51,6 +59,19 @@ It is commonly accepted that 128 bits of entropy leads to a
 globally unique identity.  This assumes that no deliberate
 attempts to clashes are made, of course, but other than that
 a size of 128 bits is considered unique.
+
+In AX.25 we can derive some entropy from the source and destination
+addresses for a radio transmission.  Each address in AX.25 is coded
+into 7 bytes, each holding 7 bits of data, so 49 bits each.  The
+variants that can be derived are receiver-only (2^49 variants)
+and transmitter-plus-receiver (2^98 variants) so we have a
+total entropy of little over 98 bits, and that is overlooking
+that not all syntaxes are permitted in the address fields.  There
+may however be out-of-band identities communicated?
+**TODO:** *We would then need to tie those to the radio layer,
+somehow.  Not sure if that would work.  If not, we can send less
+redundant signals, namely up to the permissable address forms,
+which is well below 98 bits.*
 
 The risk of a clash is not 2^-128 though, it is the square
 root of that, so 2^-64 for a 50% risk of a clash, as the result
@@ -99,9 +120,9 @@ clashes are prevented due to the global allocation scheme for unique
 names.  OrthoMod does not require call signs anywhere, and facilitates
 the random forms at the same level of functionality.  The representation
 of the call sign in its smallest UTF-8 form is used to identify a
-radio amateur, plus an uppercase hex digit to identify a station,
-with 0 as the default station.  For PA1RVR, the complete default
-code is then the string "PA1RVR0".
+radio amateur, plus a dash and decimal number to identify a station,
+with 0 as the default station, but still mentioned explicitly.  For
+PA1RVR, the complete default code is then the string "PA1RVR-0".
 
 In both cases, the code would designate an end point, not a channel.
 When communication is sent outside of a connection, then the identity
@@ -161,43 +182,44 @@ The last remaining value is concatenated to the output list.
 ### Example Identification
 
 Let's say PA1RVR is about to transmit from station 3 to station 12.
-The stations bear designations "PA1RVR3" and "PA1RVRC", with the
+The stations bear designations "PA1RVR-3" and "PA1RVR-12", with the
 following SHA256 values in hex notation:
 
-  * `13cb1ed8e701e697073c9ba5645d159d3e8b33457ffd76230fb8847d7d62e77e`
-  * `2b75cc999c69d12deb782093bd934d32d2fe3da94daaf6992a94358663ef0b1c`
+
+  * `133c3709ac69e5ae87cb15e5dddab8fe34c5da885fd2823fce68162e0e9bf18c`
+  * `54ec8b03b89751453bc50c076e602c4328cd3f384fdb982618631edc89beac8a`
 
 The rotated channel identities, used to blend in the transmitter, are:
 
-  * `3e8b33457ffd76230fb8847d7d62e77e13cb1ed8e701e697073c9ba5645d159d`
-  * `d2fe3da94daaf6992a94358663ef0b1c2b75cc999c69d12deb782093bd934d32`
+  * `34c5da885fd2823fce68162e0e9bf18c133c3709ac69e5ae87cb15e5dddab8fe`
+  * `28cd3f384fdb982618631edc89beac8a54ec8b03b89751453bc50c076e602c43`
 
 We shall XOR the binary values below the hex, take the first half,
 split it into big-endian values of 32 bits and call the result our
 channel identity.  We then obtain the frequency hopping scheme that
 matches this channel identity.
 
-When PA1RVR3 transmits to PA1RVRC, the channel identity is, depending
+When PA1RVR-3 transmits to PA1RVR-12, the channel identity is, depending
 on the form you prefer:
 
-  * `15feffdce394a70ee4c0a4eec0f1aa4c`
-  * 0x15feffdc, 0xe394a70e, 0xe4c0a4ee, 0xc0f1aa4c
-  * 369033180, 3818170126, 3837830382, 3237063244
+  * `6029518be745d37af5ad1a2960fbddcf`
+  * 0x6029518b, 0xe745d37a, 0xf5ad1a29, 0x60fbddcf
+  * 1613320587, 3880113018, 4121762345, 1627119055
 
 and the corresponding frequency hopping plan is:
 
-  * 28, 7, 4, 29, 3, 31, 6, 26, 15, 16, 21, 0, 5, 20, 11, 2, 25, 17, 24, 9, 10, 1, 8, 23, 14, 19, 27, 18, 30, 12, 22, 13.
+  * 11, 7, 27, 13, 28, 4, 2, 21, 6, 5, 19, 15, 10, 0, 29, 26, 16, 23, 18, 3, 1, 30, 22, 9, 31, 12, 17, 20, 25, 8, 14, 24.
 
-When PA1RVRC transmits to PA1RVR3, the channel identity is, depending
+When PA1RVR-12 transmits to PA1RVR-3, the channel identity is, depending
 on the form you prefer:
 
-  * `c1352371aaab100e2da8ae2307b21e81`
-  * 0xc1352371, 0xaaab100e, 0x2da8ae23, 0x07b21e81
-  * 3241485169, 2863337486, 766029347, 129113729
+  * `3bf10831e3b27d889fa80b3954641474`
+  * 0x3bf10831, 0xe3b27d88, 0x9fa80b39, 0x54641474
+  * 1005652017, 3820125576, 2678590265, 1415844980
 
 and the corresponding frequency hopping plan is:
 
-  * 17, 5, 31, 24, 4, 1, 27, 18, 9, 11, 23, 8, 13, 22, 19, 26, 21, 12, 30, 25, 7, 0, 28, 20, 10, 14, 29, 16, 3, 2, 15, 6.
+  * 17, 3, 22, 10, 15, 7, 26, 8, 28, 30, 29, 0, 9, 23, 21, 19, 20, 31, 24, 16, 27, 14, 4, 12, 2, 11, 18, 6, 25, 13, 1, 5.
 
 **Code:** See [freqhop.py](../models/freqhop.py) for a demonstration,
 callable with the designations for a transmitter and receiver.
